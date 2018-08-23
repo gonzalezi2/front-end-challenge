@@ -4,18 +4,23 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack-dev-server --config ./webpack.config.js --mode development --open --hot",
-    "test": "echo \"You'll have to bootstrap your own testing environment\" && exit 1"
+    "test": "jest"
   },
   "author": "Club OS",
   "dependencies": {
+    "moment": "^2.22.2",
     "vue": "^2.5.17",
     "vue-loader": "^15.3.0",
+    "vue-resource": "^1.5.1",
     "vue-template-compiler": "^2.5.17"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-jest": "^23.4.2",
     "babel-loader": "^7.1.5",
     "babel-preset-env": "^1.7.0",
+    "jest": "^23.5.0",
+    "vue-jest": "^2.6.0",
     "webpack": "^4.16.5",
     "webpack-cli": "^3.1.0",
     "webpack-dev-server": "^3.1.5"
@@ -25,5 +30,18 @@
       "env"
     ],
     "plugins": []
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^vue$": "vue/dist/vue.common.js"
+    },
+    "moduleFileExtensions": [
+      "js",
+      "vue"
+    ],
+    "transform": {
+      "^.+\\.js$": "<rootDir>/node_modules/babel-jest",
+      ".*\\.(vue)$": "<rootDir>/node_modules/vue-jest"
+    }
   }
 }
