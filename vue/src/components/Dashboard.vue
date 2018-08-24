@@ -6,11 +6,22 @@
     <div class="row">
       <div class="col">
         <label for="start-date">Start</label>
-        <input type="date" id="start-date" class="form-control">
+        <input
+          type="date"
+          id="start-date"
+          class="form-control"
+          :max="dates.endDate"
+          v-model="dates.startDate"
+          >
       </div>
       <div class="col">
         <label for="end-date">End</label>
-        <input type="date" id="end-date" class="form-control">
+        <input
+          type="date"
+          id="end-date"
+          class="form-control"
+          :min="dates.startDate"
+          v-model="dates.endDate">
       </div>
     </div>
     </div>
@@ -22,7 +33,8 @@
           v-bind:key="widget.id"
           v-on:delete-widget="deleteWidget(widget)"
           :listOfLocations="listOfLocations"
-        /></Location>
+          :dates="dates"
+        />
       </div>
       <div class="mt-3" v-else>
         <p class="text-center">There does not seem to be anything here! You can start by adding a location</p>
@@ -47,8 +59,10 @@ export default {
   },
   data: function() {
     return {
-      sample: 'hello world!',
-      active: true,
+      dates: {
+        startDate: Date,
+        endDate: Date
+      },
       widgets: [],
       listOfLocations: [],
       counter: 1
