@@ -4,9 +4,11 @@
             <div class="card-header">
                 <div class="row">
                     <div class="col-10">
+                    <label for="location-select">Location</label>
                     <select class="form-control"
                             v-model="selected"
-                            v-on:change="changedLocation(selected)">
+                            id="location-select"
+                            aria-label="select a location">
                         <option selected disabled value="">Please select a location</option>
                         <option
                             v-for="location in listOfLocations"
@@ -18,7 +20,7 @@
                     </select>
                     </div>
                     <div class="col-2">
-                        <button type="button" class="close" aria-label="Close" v-on:click="$emit('delete-widget', widget)">
+                        <button type="button" class="close" aria-label="remove location" v-on:click="$emit('delete-widget', widget)">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -35,6 +37,8 @@
 
 <script>
 import moment from 'moment';
+import axios from 'axios';
+
 export default {
     name: 'Location',
     props: {
@@ -42,9 +46,10 @@ export default {
         listOfLocations: Array,
         dates: Object
     },
-    data: function() {
+    data() {
         return {
             locationCheckins: [],
+            filteredCheckins: [],
             memberAgreements: [],
             busiestWeekdays: [],
             agreementTypes: {},
@@ -54,14 +59,14 @@ export default {
         }
     },
     computed: {
-        commaDays: function() {
-            return this.busiestWeekdays.join(" ").split(" ").join(", ");
+        commaDays() {
+            return this.commaSeparated(this.busiestWeekdays);
         },
-        commAgreements: function() {
-            return this.mostPopularAgreement.join(" ").split(" ").join(", ");
+        commAgreements() {
+            return this.commaSeparated(this.mostPopularAgreement)
         },
-        commMpaAgreements: function() {
-            return this.mpaOnBusiestWeekday.join(" ").split(" ").join(", ");
+        commMpaAgreements() {
+            return this.commaSeparated(this.mpaOnBusiestWeekday)
         }
     },
     watch: {
@@ -69,35 +74,35 @@ export default {
             deep: true,
             handler() {
                 this.filterCheckins();
-                this.findBusiestWeekday();
-                this.findMostPopularAgreement();
-                this.findWeekdayAgreements();
+            }
+        },
+        selected: {
+            handler(selected) {
+                let checkinsURL = `https://code-challenge-api.club-os.com/api/locations/${selected}/member-checkins`;
+                let agreementsURL = `https://code-challenge-api.club-os.com/api/locations/${selected}/member-agreements`;
+
+                Promise.all([
+                    axios.get(checkinsURL), axios.get(agreementsURL)
+                ])
+                .then(([checkins, agreements]) => {
+                    this.locationCheckins = checkins.data.data;
+                    this.memberAgreements = agreements.data.data;
+                    this.agreementTypes = agreements.data.metadata.agreementTypes;
+                    this.filterCheckins()
+                });
             }
         }
     },
     methods: {
-        changedLocation: function(selected) {
-            let checkinsURL = `https://code-challenge-api.club-os.com/api/locations/${selected}/member-checkins`;
-            let agreementsURL = `https://code-challenge-api.club-os.com/api/locations/${selected}/member-agreements`;
-            
-            Promise.all([
-                this.$http.get(checkinsURL), this.$http.get(agreementsURL)
-            ]).then(([checkins, agreements]) => {
-                this.locationCheckins = checkins.body.data;
-                this.memberAgreements = agreements.body.data;
-                this.agreementTypes = agreements.body.metadata.agreementTypes;
-            })
-            //.then(this.filterCheckins)
-            .then(this.findBusiestWeekday)
-            .then(this.findMostPopularAgreement)
-            .then(this.findWeekdayAgreements);
-        },
-        filterCheckins: function() {            
-            this.locationCheckins = this.locationCheckins.filter((checkin, index) => {
-                return checkin.date >= this.dates.startDate && checkin.date <= (this.dates.endDate || new Date());
+        filterCheckins() {
+            let start = this.dates.startDate;
+            let end = this.dates.endDate || moment().format();
+            this.filteredCheckins = this.locationCheckins.filter(function(checkin, index) {
+                return start === "" ? true : checkin.date >= start && checkin.date <= end;
             });
+            this.updateStats();
         },
-        findMode: function(arr) {
+        findMode(arr) {
             var mappedCounts = new Map();
             var current = "";
             var counter;
@@ -123,22 +128,35 @@ export default {
             }
             return mode;        
         },
-        findBusiestWeekday: function() {
+        findBusiestWeekday() {
             let weekday = [];
             //Pushes a day-formatted string into the weekday array
-            this.locationCheckins.forEach(checkin => {
+            this.filteredCheckins.forEach(checkin => {
                 weekday.push(moment(checkin.date).format('dddd'));
             });
             this.busiestWeekdays = this.findMode(weekday);
         },
-        findMostPopularAgreement: function() {
+        findMostPopularAgreement() {
             let agreements = [];
-            this.memberAgreements.forEach(item => {
+            let filteredMembers = [];
+            let memberIds = [];
+            // Get all the member ids from filtered checkins
+            this.filteredCheckins.forEach(checkin => {
+                memberIds.push(checkin.memberId);
+            });
+            // Get all agreements based on member ids found on the filtered checkins
+            memberIds.forEach(id => {
+                filteredMembers = this.memberAgreements.filter(function(item){
+                    return item.memberId === id;
+                });
+            });
+            // Get all the agreement types from the array of filtered members array
+            filteredMembers.forEach(item => {
                 agreements.push(this.agreementTypes[item.agreement]);
             });
             this.mostPopularAgreement = this.findMode(agreements);
         },
-        findWeekdayAgreements: function() {
+        findWeekdayAgreements() {
             let popularWeekdays = [];
             let memberIds = new Set();
             let agreements = [];
@@ -164,6 +182,14 @@ export default {
                 });
             });
             this.mpaOnBusiestWeekday = this.findMode(agreements);
+        },
+        updateStats() {
+            this.findBusiestWeekday();
+            this.findMostPopularAgreement();
+            this.findWeekdayAgreements();
+        },
+        commaSeparated(arr) {
+            return arr.join(" ").split(" ").join(", ");
         }
     }
 }

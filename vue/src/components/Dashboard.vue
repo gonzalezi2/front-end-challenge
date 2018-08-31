@@ -2,7 +2,8 @@
   <div class="my-5 card">
     <div class="card-header">
     <h1 class="text-center">Promotion Analytics</h1>
-    <p class="text-center">Filter Date:</p>
+    <hr>
+    <p class="text-center"><strong>Filter Date:</strong></p>
     <div class="row">
       <div class="col">
         <label for="start-date">Start</label>
@@ -10,6 +11,8 @@
           type="date"
           id="start-date"
           class="form-control"
+          aria-label="start-date"
+          accesskey="0"
           :max="dates.endDate"
           v-model="dates.startDate"
           >
@@ -19,6 +22,8 @@
         <input
           type="date"
           id="end-date"
+          aria-label="end-date"
+          accesskey="1"
           class="form-control"
           :min="dates.startDate"
           v-model="dates.endDate">
@@ -41,44 +46,48 @@
       </div>
     </div>
     <div class="card-footer clearfix">        
-      <button class="btn btn-success mb-1 float-right" v-on:click="addWidget">Add Location</button>
+      <button id="add-location" class="btn btn-success mb-1 float-right" v-on:click="addWidget" accesskey="3">Add Location</button>
     </div>
   </div>
 </template>
 
 <script>
 import Location from './Location';
+import Vue from 'vue';
+import axios from 'axios';
 
 export default {
   name: 'Dashboard',
   components: {Location},
-  created: function(){
-    this.$http.get('https://code-challenge-api.club-os.com/api/locations/').then(function(response){
-      this.listOfLocations = response.data.data;
-    })
-  },
-  data: function() {
+  data() {
     return {
       dates: {
-        startDate: Date,
-        endDate: Date
+        startDate: "",
+        endDate: ""
       },
       widgets: [],
       listOfLocations: [],
       counter: 1
     }
   },
+  created() {
+      axios
+      .get('https://code-challenge-api.club-os.com/api/locations/')
+      .then(response => {
+        this.listOfLocations = response.data.data;
+      })
+      .catch(error => console.log(error));
+  },
   methods: {
-    deleteWidget: function(widget) {
+    deleteWidget(widget) {
       this.widgets.splice(this.widgets.indexOf(widget), 1);
     },
-    addWidget: function() {
+    addWidget() {
       this.widgets.push({
         id: this.counter
       });
       this.counter++;
-      console.log(this.widgets, this.counter);
-    }
+    },
   }
 }
 </script>
